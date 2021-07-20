@@ -1,53 +1,25 @@
 version: 2
-
-executors:
-  my-executor:
+jobs:
+  build:
     docker:
-      - image: buildpack-deps:jessie
+      - image: python:3.6.3-jessie
         auth:
           username: mydockerhub-user
           password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+
     working_directory: /tmp
-
-jobs:
-  flow:
-    executor: my-executor
     steps:
-      - run: mkdir -p workspace
-      - run: echo "Hello, world!" > workspace/echo-output
 
-      # ダウンストリーム ジョブ用に、指定したパス (workspace/echo-output) をワークフローに維持します。
-      - persist_to_workspace:
-          # 絶対パスまたは working_directory からの相対パスでなければなりません。
-      - persist_to_workspace:
-          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is
-          # taken to be the root directory of the workspace.
-           #  絶対パス、または working_directory からの相対パスで指定する必要があります。これは、コンテナ上のディレクトリで、ワークスペースのルートディレクトリと見なされます。
-          root: workspace
-          # ルートからの相対パスを指定する必要があります
-          paths:
-            - echo-output
+      - run:
+          name: ダミー アーティファクトの作成
+          command: |
+            echo "my artifact file" > /tmp/artifact-1;
+            mkdir /tmp/artifacts;
+            echo "my artifact files in a dir" > /tmp/artifacts/artifact-2;
 
-  downstream:
-    executor: my-executor
-    steps:
-      - attach_workspace:
-          # 絶対パスまたは working_directory からの相対パスを指定する必要があります
-          at: /tmp/workspace
+      - store_artifacts:
+          path: /tmp/artifact-1
+          destination: artifact-file
 
-      - run: |
-          if [[ `cat /tmp/workspace/echo-output` == "Hello, world!" ]]; then
-            echo "It worked!";
-          else
-            echo "Nope!"; exit 1
-          fi
-
-workflows:
-  version: 2
-
-  btd:
-    jobs:
-      - flow
-      - downstream:
-          requires:
-            - flow
+      - store_artifacts:
+          path: /tmp/artifacts
